@@ -52,23 +52,23 @@ temporal_downscale <- function(input_file, output_file, overwrite = TRUE, hr = 1
   names(noaa_data) <- c("time",cf_var_names)
 
   # spline-based downscaling
-  if(length(which(c("air_temperature", "wind_speed","specific_humidity", "air_pressure", "soil_temperature") %in% cf_var_names) == 5)){
-    forecast_noaa_ds <- downscale_spline_to_hrly(df = noaa_data, VarNames = c("air_temperature", "wind_speed","specific_humidity", "air_pressure", "soil_temperature"))
+  if(length(which(c("air_temperature", "air_pressure", "relative_humidity", "specific_humidity", "wind_speed", "soil_temperature", "vpd") %in% cf_var_names) == 7)){
+    forecast_noaa_ds <- downscale_spline_to_hrly(df = noaa_data, VarNames = c("air_temperature", "air_pressure", "relative_humidity", "specific_humidity", "wind_speed", "soil_temperature", "vpd"))
   }else{
     #Add error message
   }
-
-  # Convert splined SH, temperature, and presssure to RH
-  forecast_noaa_ds <- forecast_noaa_ds %>%
-    dplyr::mutate(relative_humidity = qair2rh(qair = forecast_noaa_ds$specific_humidity,
-                                       temp = forecast_noaa_ds$air_temperature,
-                                       press = forecast_noaa_ds$air_pressure)) %>%
-    dplyr::mutate(relative_humidity = relative_humidity,
-           relative_humidity = ifelse(relative_humidity > 1, 0, relative_humidity))
-
-  forecast_noaa_ds <- forecast_noaa_ds %>%
-    dplyr::mutate(vpd = rh2vpd(rh = forecast_noaa_ds$relative_humidity,
-                                       T = forecast_noaa_ds$air_temperature))
+#
+#   # Convert splined SH, temperature, and presssure to RH
+#   forecast_noaa_ds <- forecast_noaa_ds %>%
+#     dplyr::mutate(relative_humidity = qair2rh(qair = forecast_noaa_ds$specific_humidity,
+#                                        temp = forecast_noaa_ds$air_temperature,
+#                                        press = forecast_noaa_ds$air_pressure)) %>%
+#     dplyr::mutate(relative_humidity = relative_humidity,
+#            relative_humidity = ifelse(relative_humidity > 1, 0, relative_humidity))
+#
+#   forecast_noaa_ds <- forecast_noaa_ds %>%
+#     dplyr::mutate(vpd = rh2vpd(rh = forecast_noaa_ds$relative_humidity,
+#                                        T = forecast_noaa_ds$air_temperature))
 
   # convert longwave to hourly (just copy 6 hourly values over past 6-hour time period)
   if("surface_downwelling_longwave_flux_in_air" %in% cf_var_names){
@@ -112,6 +112,8 @@ temporal_downscale <- function(input_file, output_file, overwrite = TRUE, hr = 1
   #Make sure var names are in correct order
   forecast_noaa_ds <- forecast_noaa_ds %>%
     dplyr::select("time", all_of(cf_var_names), "NOAA.member")
+
+  plot(forecast_noaa_ds$relative_humidity)
 
   #Write netCDF
   noaaGEFSpoint::write_noaa_gefs_netcdf(df = forecast_noaa_ds,
